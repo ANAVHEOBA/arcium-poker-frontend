@@ -1,5 +1,5 @@
 {
-  "address": "FHzVm4eu5ZuuzX3W4YRD8rS6XZVrdXubrJnYTqgBYZu2",
+  "address": "B5E1V3DJsjMPzQb4QyMUuVhESqnWMXVcead4AEBvJB4W",
   "metadata": {
     "name": "arcium_poker",
     "version": "0.1.0",
@@ -128,6 +128,104 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "handle_shuffle_callback",
+      "docs": [
+        "Handle MXE callback with shuffle result",
+        "Called by Arcium network after MPC computation completes"
+      ],
+      "discriminator": [
+        24,
+        190,
+        241,
+        17,
+        99,
+        225,
+        136,
+        52
+      ],
+      "accounts": [
+        {
+          "name": "game",
+          "writable": true
+        },
+        {
+          "name": "mxe_program",
+          "docs": [
+            "MXE program calling back"
+          ]
+        },
+        {
+          "name": "computation_account",
+          "docs": [
+            "Computation account with results"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "computation_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "encrypted_output",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "init_shuffle_comp_def",
+      "docs": [
+        "Initialize computation definition for MPC shuffle",
+        "Must be called once after deployment"
+      ],
+      "discriminator": [
+        194,
+        175,
+        67,
+        37,
+        158,
+        107,
+        165,
+        180
+      ],
+      "accounts": [
+        {
+          "name": "mxe_account",
+          "docs": [
+            "MXE account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "comp_def_account",
+          "docs": [
+            "Computation definition account to initialize"
+          ],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "comp_def_offset",
+          "type": "u32"
+        }
+      ]
     },
     {
       "name": "initialize_game",
@@ -844,6 +942,75 @@
             "Game authority (creator) must start the game"
           ],
           "signer": true
+        },
+        {
+          "name": "mxe_program",
+          "docs": [
+            "MXE program for encrypted computations"
+          ]
+        },
+        {
+          "name": "mxe_account",
+          "docs": [
+            "MXE account for this program"
+          ],
+          "writable": true
+        },
+        {
+          "name": "comp_def_account",
+          "docs": [
+            "Computation definition account for shuffle"
+          ],
+          "writable": true
+        },
+        {
+          "name": "mempool_account",
+          "docs": [
+            "Mempool account for queueing computations"
+          ],
+          "writable": true
+        },
+        {
+          "name": "executing_pool_account",
+          "docs": [
+            "Executing pool account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "cluster_account",
+          "docs": [
+            "Cluster account"
+          ]
+        },
+        {
+          "name": "computation_account",
+          "docs": [
+            "Computation account (will be created)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "sign_seed",
+          "docs": [
+            "Sign seed PDA"
+          ]
+        },
+        {
+          "name": "staking_pool",
+          "docs": [
+            "Staking pool PDA"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "clock",
+          "docs": [
+            "Clock sysvar"
+          ]
         }
       ],
       "args": [
@@ -953,118 +1120,23 @@
   "errors": [
     {
       "code": 6000,
-      "name": "GameFull",
-      "msg": "Game is full, cannot join"
+      "name": "MxeComputationFailed",
+      "msg": "MXE computation failed"
     },
     {
       "code": 6001,
-      "name": "NotEnoughPlayers",
-      "msg": "Not enough players to start game"
+      "name": "InvalidMxeCallback",
+      "msg": "Invalid MXE callback"
     },
     {
       "code": 6002,
-      "name": "GameAlreadyStarted",
-      "msg": "Game has already started"
+      "name": "EncryptionFailed",
+      "msg": "Encryption failed"
     },
     {
       "code": 6003,
-      "name": "InvalidGameStage",
-      "msg": "Game is not in the correct stage for this action"
-    },
-    {
-      "code": 6004,
-      "name": "PlayerNotInGame",
-      "msg": "Player is not in this game"
-    },
-    {
-      "code": 6005,
-      "name": "PlayerAlreadyInGame",
-      "msg": "Player already in game"
-    },
-    {
-      "code": 6006,
-      "name": "InsufficientBalance",
-      "msg": "Insufficient balance for buy-in"
-    },
-    {
-      "code": 6007,
-      "name": "BuyInTooLow",
-      "msg": "Buy-in amount too low"
-    },
-    {
-      "code": 6008,
-      "name": "BuyInTooHigh",
-      "msg": "Buy-in amount too high"
-    },
-    {
-      "code": 6009,
-      "name": "InvalidBetAmount",
-      "msg": "Invalid bet amount"
-    },
-    {
-      "code": 6010,
-      "name": "NotPlayerTurn",
-      "msg": "Not player's turn"
-    },
-    {
-      "code": 6011,
-      "name": "InvalidAction",
-      "msg": "Invalid action for current game state"
-    },
-    {
-      "code": 6012,
-      "name": "InsufficientChips",
-      "msg": "Player has insufficient chips"
-    },
-    {
-      "code": 6013,
-      "name": "InvalidSeatPosition",
-      "msg": "Invalid seat position"
-    },
-    {
-      "code": 6014,
-      "name": "SeatOccupied",
-      "msg": "Seat is already occupied"
-    },
-    {
-      "code": 6015,
-      "name": "CannotLeaveDuringHand",
-      "msg": "Cannot leave during active hand"
-    },
-    {
-      "code": 6016,
-      "name": "DeckNotInitialized",
-      "msg": "Deck not initialized"
-    },
-    {
-      "code": 6017,
-      "name": "CardsNotDealt",
-      "msg": "Cards not dealt yet"
-    },
-    {
-      "code": 6018,
-      "name": "InvalidCardIndex",
-      "msg": "Invalid card index"
-    },
-    {
-      "code": 6019,
-      "name": "ArciumMpcFailed",
-      "msg": "Arcium MPC operation failed"
-    },
-    {
-      "code": 6020,
-      "name": "EncryptionFailed",
-      "msg": "Encryption/Decryption failed"
-    },
-    {
-      "code": 6021,
-      "name": "InvalidGameConfig",
-      "msg": "Invalid game configuration"
-    },
-    {
-      "code": 6022,
-      "name": "GameNotFinished",
-      "msg": "Game has not finished"
+      "name": "DecryptionFailed",
+      "msg": "Decryption failed"
     }
   ],
   "types": [

@@ -228,4 +228,49 @@ export class DeckManager {
     const remaining = deck.slice(count);
     return { dealt, remaining };
   }
+
+  /**
+   * Get card display string from index (0-51)
+   * 
+   * @param index - Card index (0-51)
+   * @returns Display string (e.g., "A♠") or "?" for invalid
+   */
+  static getCardDisplayFromIndex(index: number): string {
+    const card = this.decodeCard(index);
+    if (!card) return '?';
+    return this.getCardDisplay(card);
+  }
+
+  /**
+   * Get card color from index (for styling)
+   * 
+   * @param index - Card index (0-51)
+   * @returns 'red' for hearts/diamonds, 'black' for clubs/spades
+   */
+  static getCardColorFromIndex(index: number): 'red' | 'black' {
+    const card = this.decodeCard(index);
+    if (!card) return 'black';
+    return [Suit.Hearts, Suit.Diamonds].includes(card.suit) ? 'red' : 'black';
+  }
+
+  /**
+   * Get full card object from index with display properties
+   * 
+   * @param index - Card index (0-51)
+   * @returns Card info with display properties
+   */
+  static getCardInfoFromIndex(index: number): { 
+    card: Card | null; 
+    display: string; 
+    color: 'red' | 'black';
+    isValid: boolean;
+  } {
+    const card = this.decodeCard(index);
+    return {
+      card,
+      display: card ? this.getCardDisplay(card) : '?',
+      color: card && [Suit.Hearts, Suit.Diamonds].includes(card.suit) ? 'red' : 'black',
+      isValid: card !== null
+    };
+  }
 }

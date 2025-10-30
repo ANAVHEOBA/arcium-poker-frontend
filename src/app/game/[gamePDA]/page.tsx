@@ -11,6 +11,7 @@ import { useShowdown } from '@/hooks/useShowdown';
 import { PlayerActionButtons } from '@/components/game/PlayerActionButtons';
 import { PlayerHoleCards } from '@/components/game/PlayerHoleCards';
 import { WinnerDisplay } from '@/components/game/WinnerDisplay';
+import { DeckManager } from '@/lib/cards/deck';
 
 export default function GamePage() {
   const params = useParams();
@@ -38,28 +39,40 @@ export default function GamePage() {
       try {
         setLoading(true);
         console.log('🎮 Fetching game:', gamePDA);
-        
+
         // Initialize program with read-only provider
         const { Connection } = await import('@solana/web3.js');
         const { AnchorProvider, Program } = await import('@coral-xyz/anchor');
         const idl = (await import('@/arcium_poker.json')).default;
-        
+
         const connection = new Connection(
           process.env.NEXT_PUBLIC_RPC_ENDPOINT || 'https://api.devnet.solana.com',
           'confirmed'
         );
-        
+
         const provider = new AnchorProvider(
           connection,
           {} as any,
           { commitment: 'confirmed' }
         );
-        
+
         const program = new Program(idl as any, provider);
-        
-        // Fetch the game account
-        const gameAccount = await program.account.game.fetch(new PublicKey(gamePDA));
-        console.log('✅ Game fetched:', gameAccount);
+
+        // Fetch the game account with retry logic (account may not be propagated yet)
+        let gameAccount;
+        let retries = 5;
+        while (retries > 0) {
+          try {
+            gameAccount = await program.account.game.fetch(new PublicKey(gamePDA));
+            console.log('✅ Game fetched:', gameAccount);
+            break;
+          } catch (err: any) {
+            if (retries === 1) throw err; // Last retry, throw error
+            console.log(`⏳ Waiting for account to propagate... (${retries} retries left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            retries--;
+          }
+        }
         
         // Fetch all player states for this game
         console.log('👥 Fetching players...');
@@ -132,10 +145,20 @@ export default function GamePage() {
       return;
     }
 
-    const result = await startGame(new PublicKey(gamePDA));
+    // Extract gameId from game account (it's a BN, convert to number)
+    const gameId = game?.gameId?.toNumber();
+    if (gameId === undefined) {
+      alert('Failed to get game ID');
+      return;
+    }
+
+    const result = await startGame(new PublicKey(gamePDA), gameId);
     
     if (result.success) {
       alert('Game started! 🎉 Let the poker begin!');
+      // Wait a bit for blockchain state to finalize before refreshing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await refreshGame();
       window.location.reload();
     } else {
       alert(`Failed to start game: ${result.error}`);
@@ -329,7 +352,9 @@ export default function GamePage() {
         {players.some((p: any) => p.account.player.toBase58() === wallet.publicKey?.toBase58()) && !game?.stage?.waiting && (
           <PlayerHoleCards
             playerState={players.find((p: any) => p.account.player.toBase58() === wallet.publicKey?.toBase58())?.account}
+            game={game}
             isCurrentUser={true}
+            showRevealed={game?.stage?.showdown || game?.stage?.finished}
           />
         )}
 
@@ -416,17 +441,21 @@ export default function GamePage() {
               Community Cards
             </h2>
             <div className="flex items-center justify-center gap-3 py-6">
-              {game?.communityCards && game.communityCards.slice(0, game.communityCardsRevealed || 0).map((card: number, index: number) => (
-                <div
-                  key={index}
-                  className="w-16 h-24 bg-white rounded-lg border-2 border-gray-300 flex items-center justify-center shadow-lg"
-                >
-                  <span className="text-2xl font-bold text-gray-800">
-                    {card === 0 ? '?' : card}
-                  </span>
-                </div>
-              ))}
-              {(!game?.communityCardsRevealed || game.communityCardsRevealed === 0) && (
+              {game?.communityCards && game.communityCardsRevealed > 0 ? (
+                game.communityCards.slice(0, game.communityCardsRevealed).map((cardIndex: number, index: number) => {
+                  const cardInfo = DeckManager.getCardInfoFromIndex(cardIndex);
+                  return (
+                    <div
+                      key={index}
+                      className="w-16 h-24 bg-white rounded-lg border-2 border-gray-300 flex items-center justify-center shadow-lg"
+                    >
+                      <span className={`text-2xl font-bold ${cardInfo.color === 'red' ? 'text-red-500' : 'text-gray-800'}`}>
+                        {cardInfo.display}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
                 <p className="text-gray-500 text-sm">No cards revealed yet</p>
               )}
             </div>

@@ -13,10 +13,14 @@ import { PublicKey, Commitment } from '@solana/web3.js';
 
 /**
  * Arcium Poker Program ID (from IDL)
- * Address: FHzVm4eu5ZuuzX3W4YRD8rS6XZVrdXubrJnYTqgBYZu2
+ * Address: B5E1V3DJsjMPzQb4QyMUuVhESqnWMXVcead4AEBvJB4W
+ * Network: Devnet
+ * Deployed: Oct 30, 2025 (MOCK MODE - Deterministic shuffling for testing)
+ * Mode: MOCK (no MXE accounts - deterministic shuffle)
+ * Status: ✅ Fully functional for development and testing
  */
 export const PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_PROGRAM_ID || 'FHzVm4eu5ZuuzX3W4YRD8rS6XZVrdXubrJnYTqgBYZu2'
+  process.env.NEXT_PUBLIC_PROGRAM_ID || 'B5E1V3DJsjMPzQb4QyMUuVhESqnWMXVcead4AEBvJB4W'
 );
 
 /**
@@ -154,16 +158,39 @@ export const RPC_TIMEOUT_MS = 30000;
 
 /**
  * MPC enabled flag
+ *
+ * Current mode: MOCK (MPC_ENABLED = false)
+ *
+ * When false, the frontend does NOT provide MXE accounts to start_game,
+ * causing the smart contract to use deterministic shuffling instead of
+ * real Arcium MPC network.
+ *
+ * Benefits of MOCK mode:
+ * ✅ Full game functionality works
+ * ✅ No MPC network dependency
+ * ✅ Perfect for development and testing
+ * ✅ Faster game start (no MPC computation wait)
+ *
+ * To enable REAL MPC: Set NEXT_PUBLIC_MPC_ENABLED=true in .env
  */
-export const MPC_ENABLED = 
+export const MPC_ENABLED =
   process.env.NEXT_PUBLIC_MPC_ENABLED === 'true' || false;
 
 /**
- * MPC Program ID (if deployed)
+ * Arcium MXE Program ID (for real MPC computation)
+ * This is the official Arcium network program, NOT your poker program!
+ *
+ * Status: 🔄 NOT CURRENTLY USED (Mock mode enabled)
+ * - Arcium Network Program: BKck65TgoKRokMjQM3datB9oRwJ8rAj2jxPXvHXUvcL6
+ * - Cluster offset: 1078779259 (Arcium devnet cluster)
+ *
+ * The smart contract has dual-mode support:
+ * - With MXE accounts: Uses real Arcium MPC network (requires MPC_ENABLED=true)
+ * - Without MXE accounts: Uses deterministic mock ✅ CURRENTLY ACTIVE
  */
 export const MPC_PROGRAM_ID = process.env.NEXT_PUBLIC_MPC_PROGRAM_ID
   ? new PublicKey(process.env.NEXT_PUBLIC_MPC_PROGRAM_ID)
-  : null;
+  : new PublicKey('BKck65TgoKRokMjQM3datB9oRwJ8rAj2jxPXvHXUvcL6'); // Arcium MXE Program (not used in mock mode)
 
 /**
  * MPC callback URL for receiving computation results
